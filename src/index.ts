@@ -2,9 +2,9 @@
 import { sequelize } from './shared/utils/database';
 
 // models
-import { Ticket } from './features/parking-garage/models/Ticket';
-import { PaymentMethod } from './features/parking-garage/models/PaymentMethod';
-import { Payment } from './features/parking-garage/models/Payment';
+import { Ticket as TicketModel } from './features/parking-garage/models/Ticket';
+import { PaymentMethod as PaymentMethodModel } from './features/parking-garage/models/PaymentMethod';
+import { Payment as PaymentModel } from './features/parking-garage/models/Payment';
 
 // routes
 import { ticketsRouter } from './features/parking-garage/ParkingGarage.routes';
@@ -23,24 +23,24 @@ app.use((req, res, next) => {
 });
 app.use(ticketsRouter);
 
-PaymentMethod.hasMany(Payment, {
+PaymentMethodModel.hasMany(PaymentModel, {
 	foreignKey: {
 		allowNull: false,
 	}
 });
-Payment.belongsTo(PaymentMethod);
+PaymentModel.belongsTo(PaymentMethodModel);
 
-Ticket.hasMany(Payment);
-Payment.belongsTo(Ticket);
+TicketModel.hasMany(PaymentModel);
+PaymentModel.belongsTo(TicketModel);
 
 (async () => {
 	try {
 		await sequelize.sync(); // Use `{ force: true }` as options in order to update Associations. This will then drop and recreate the table.
-		const paymentMethod = await PaymentMethod.findByPk(1);
+		const paymentMethod = await PaymentMethodModel.findByPk(1);
 		if (!paymentMethod) {
-			await PaymentMethod.create({ name: 'CASH' });
-			await PaymentMethod.create({ name: 'CREDIT_CARD' });
-			await PaymentMethod.create({ name: 'DEBIT_CARD' });
+			await PaymentMethodModel.create({ name: 'CASH' });
+			await PaymentMethodModel.create({ name: 'CREDIT_CARD' });
+			await PaymentMethodModel.create({ name: 'DEBIT_CARD' });
 		}
 		if (process.env.NODE_ENV !== 'test') {
 			app.listen(3001);

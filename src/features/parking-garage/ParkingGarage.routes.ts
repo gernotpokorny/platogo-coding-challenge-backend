@@ -1,12 +1,12 @@
 import { Router } from 'express';
 
 // models
-import { Ticket } from './models/Ticket';
-import { Payment } from './models/Payment';
-import { PaymentMethod } from './models/PaymentMethod';
+import { Ticket as TicketModel } from './models/Ticket';
+import { Payment as PaymentModel } from './models/Payment';
+import { PaymentMethod as PaymentMethodModel } from './models/PaymentMethod';
 
 // types
-import { PaymentMethod as PaymentMethodData, Ticket as TicketData, Payment as PaymentData} from './ParkingGarage.types';
+import { PaymentMethod, Ticket } from './ParkingGarage.types';
 
 // utils
 import { generateBarCode } from './ParkingGarage.utils';
@@ -16,19 +16,19 @@ export const ticketsRouter = Router();
 
 ticketsRouter.post('/get-ticket', async (req, res, next) => {
 	const barCode = generateBarCode();
-	const ticket: Omit<TicketData, 'payments'> = {
+	const ticket: Omit<Ticket, 'payments'> = {
 		barCode,
 		dateOfIssuance: Date.now(),
 	};
-	await Ticket.create(ticket);
+	await TicketModel.create(ticket);
 	res.status(201).json({ ticket });
 });
 
 interface PostPayTicketRequestParams { }
 
 interface PostPayTicketRequestBody {
-	ticket: Omit<TicketData, 'payments'>;
-	paymentMethod: PaymentMethodData;
+	ticket: Omit<Ticket, 'payments'>;
+	paymentMethod: PaymentMethod;
 }
 
 interface PostPayTicketRequest {
@@ -37,24 +37,23 @@ interface PostPayTicketRequest {
 }
 
 ticketsRouter.post('/pay-ticket', async (req: PostPayTicketRequest, res, next) => {
-	const ticket = await Ticket.findOne({
+	const ticket = await TicketModel.findOne({
 		where: {
 			barCode: req.body.ticket.barCode,
 		}
 	});
-	const paymentMethod = await PaymentMethod.findOne({
+	const paymentMethod = await PaymentMethodModel.findOne({
 		where: {
 			name: req.body.paymentMethod,
 		},
 	});
-	console.log('paymentMethodId', paymentMethod?.dataValues.id);
 	const payment = {
 		paymentDate: new Date(),
 		PaymentMethodId: paymentMethod?.dataValues.id,
 	}
 	if (ticket) {
 		await ticket.createPayment(payment);
-		
+
 		res.status(201).json({
 			paymentDate: payment.paymentDate.getTime()
 		});
@@ -67,7 +66,7 @@ ticketsRouter.post('/pay-ticket', async (req: PostPayTicketRequest, res, next) =
 interface PostCheckoutSuccessRequestParams { }
 
 interface PostCheckoutSuccessRequestBody {
-	ticket: TicketData;
+	ticket: Ticket;
 }
 
 interface PostCheckoutSuccessRequest {
@@ -76,13 +75,13 @@ interface PostCheckoutSuccessRequest {
 }
 
 ticketsRouter.post('/checkout-success', async (req: PostCheckoutSuccessRequest, res, next) => {
-	const ticket = await Ticket.findOne({
+	const ticket = await TicketModel.findOne({
 		where: {
 			barCode: req.body.ticket.barCode,
 		}
 	});
 	if (ticket) {
-		Payment.destroy({
+		PaymentModel.destroy({
 			where: {
 				TicketId: ticket?.id,
 			}
