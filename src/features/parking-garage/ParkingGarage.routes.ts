@@ -1,14 +1,15 @@
 import { Router } from 'express';
-import { PaymentMethod } from './models/PaymentMethod';
 
 // models
 import { Ticket } from './models/Ticket';
+import { Payment } from './models/Payment';
+import { PaymentMethod } from './models/PaymentMethod';
 
 // types
-import { PaymentMethod as PaymentMethodData, Ticket as TicketData, TicketState } from './ParkingGarage.types';
+import { PaymentMethod as PaymentMethodData, Ticket as TicketData, Payment as PaymentData} from './ParkingGarage.types';
 
 // utils
-import { generateBarCode, calculateTicketState } from './ParkingGarage.utils';
+import { generateBarCode } from './ParkingGarage.utils';
 import _ from 'lodash';
 
 export const ticketsRouter = Router();
@@ -53,30 +54,40 @@ ticketsRouter.post('/pay-ticket', async (req: PostPayTicketRequest, res, next) =
 	}
 	if (ticket) {
 		await ticket.createPayment(payment);
-		// ticket.$add('payments', { id: ticket.id, ...payment });
-		res.status(201).json(_.omit(payment, ['PaymentMethodId']));
+		
+		res.status(201).json({
+			paymentDate: payment.paymentDate.getTime()
+		});
 	}
 	else {
 		res.status(500).json({});
 	}
 });
 
-interface PostGateCheckoutRequestParams { }
+interface PostCheckoutSuccessRequestParams { }
 
-interface PostGateCheckoutRequestBody {
+interface PostCheckoutSuccessRequestBody {
 	ticket: TicketData;
 }
 
-interface PostGateCheckoutRequest {
-	params: PostGateCheckoutRequestParams
-	body: PostGateCheckoutRequestBody;
+interface PostCheckoutSuccessRequest {
+	params: PostCheckoutSuccessRequestParams
+	body: PostCheckoutSuccessRequestBody;
 }
 
-ticketsRouter.post('/gate-checkout', async (req: PostGateCheckoutRequest, res, next) => {
-	const ticket = req.body.ticket;
-	const currentDate = new Date();
-	const ticketState = calculateTicketState(ticket, currentDate);
-	res.status(201).json({
-		success: ticketState === TicketState.PAID ? true : false,
+ticketsRouter.post('/checkout-success', async (req: PostCheckoutSuccessRequest, res, next) => {
+	const ticket = await Ticket.findOne({
+		where: {
+			barCode: req.body.ticket.barCode,
+		}
 	});
+	if (ticket) {
+		Payment.destroy({
+			where: {
+				TicketId: ticket?.id,
+			}
+		})
+		await ticket.destroy();
+	}
+	res.status(201).json({ success: true });
 });

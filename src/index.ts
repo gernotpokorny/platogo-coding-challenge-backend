@@ -42,8 +42,12 @@ Payment.belongsTo(Ticket);
 			await PaymentMethod.create({ name: 'CREDIT_CARD' });
 			await PaymentMethod.create({ name: 'DEBIT_CARD' });
 		}
-		app.listen(3001);
+		if (process.env.NODE_ENV !== 'test') {
+			app.listen(3001);
+		}
 	} catch (error) {
 		console.error(error);
 	}
 })();
+
+export default app;

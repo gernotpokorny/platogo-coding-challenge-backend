@@ -11,7 +11,7 @@ export class PaymentMethod extends Model<InferAttributes<PaymentMethod>, InferCr
 PaymentMethod.init(
 	{
 		id: {
-			type: DataTypes.INTEGER.UNSIGNED,
+			type: DataTypes.INTEGER,
 			autoIncrement: true,
 			allowNull: false,
 			primaryKey: true,

@@ -4,7 +4,16 @@ import { sequelize } from '../../../shared/utils/database';
 import { Payment } from './Payment';
 
 // types
-import { Model, DataTypes, CreationOptional, InferAttributes, InferCreationAttributes, HasManyCreateAssociationMixin } from 'sequelize';
+import {
+	Model,
+	DataTypes,
+	CreationOptional,
+	InferAttributes,
+	InferCreationAttributes,
+	HasManyCreateAssociationMixin,
+	HasManyRemoveAssociationsMixin,
+	HasManyGetAssociationsMixin,
+} from 'sequelize';
 
 export class Ticket extends Model<InferAttributes<Ticket>, InferCreationAttributes<Ticket>> {
 	declare id: CreationOptional<number>;
@@ -12,12 +21,14 @@ export class Ticket extends Model<InferAttributes<Ticket>, InferCreationAttribut
 	declare dateOfIssuance: number;
 
 	declare createPayment: HasManyCreateAssociationMixin<Payment>;
+	declare removePayments: HasManyRemoveAssociationsMixin<Payment, Payment['id']>;
+	declare getPayments: HasManyGetAssociationsMixin<Payment>;
 }
 
 Ticket.init(
 	{
 		id: {
-			type: DataTypes.INTEGER.UNSIGNED,
+			type: DataTypes.INTEGER,
 			autoIncrement: true,
 			allowNull: false,
 			primaryKey: true,
@@ -28,7 +39,7 @@ Ticket.init(
 			unique: true,
 		},
 		dateOfIssuance: {
-			type: DataTypes.INTEGER.UNSIGNED,
+			type: DataTypes.INTEGER,
 			allowNull: false,
 		},
 	},
