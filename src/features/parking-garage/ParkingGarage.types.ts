@@ -1,13 +1,7 @@
-export enum PaymentMethod {
-	CREDIT_CARD = 'CREDIT_CARD',
-	DEBIT_CARD = 'DEBIT_CARD',
-	CASH = 'CASH',
-}
+// constants
+import { PaymentMethod } from './ParkingGarage.constants';
 
-export enum TicketState {
-	PAID = 'PAID',
-	UNPAID = 'UNPAID',
-}
+
 
 export interface Payment {
 	paymentDate: number;

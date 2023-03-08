@@ -35,7 +35,12 @@ PaymentModel.belongsTo(TicketModel);
 
 (async () => {
 	try {
-		await sequelize.sync(); // Use `{ force: true }` as options in order to update Associations. This will then drop and recreate the table.
+		if (process.env.NODE_ENV !== 'test') {
+			await sequelize.sync(); // Use `{ force: true }` as options in order to update Associations. This will then drop and recreate the table.
+		}
+		else {
+			await sequelize.sync({ force: true });
+		}
 		const paymentMethod = await PaymentMethodModel.findByPk(1);
 		if (!paymentMethod) {
 			await PaymentMethodModel.create({ name: 'CASH' });
