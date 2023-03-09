@@ -43,7 +43,7 @@ ticketsRouter.post<PostGetTicketRequestParams, PostGetTicketResponseBody, PostGe
 interface PostPayTicketRequestParams { }
 
 export interface PostPayTicketRequestBody {
-	ticket: Omit<Ticket, 'payments' | 'dateOfIssuance'>;
+	barCode: string;
 	paymentMethod: PaymentMethod;
 	paymentDate?: number; // For testing purposes
 }
@@ -53,7 +53,7 @@ export interface PostPayTicketResponseBody {
 }
 
 ticketsRouter.post<PostPayTicketRequestParams, PostPayTicketResponseBody, PostPayTicketRequestBody>('/pay-ticket', async (req, res, next) => {
-	if (req.body.ticket === undefined) {
+	if (req.body.barCode === undefined) {
 		return res.status(422).json();
 	}
 	if (req.body.paymentMethod === undefined) {
@@ -61,7 +61,7 @@ ticketsRouter.post<PostPayTicketRequestParams, PostPayTicketResponseBody, PostPa
 	}
 	const ticketInstance = await TicketModel.findOne({
 		where: {
-			barCode: req.body.ticket.barCode,
+			barCode: req.body.barCode,
 		}
 	});
 	const paymentMethodInstance = await PaymentMethodModel.findOne({

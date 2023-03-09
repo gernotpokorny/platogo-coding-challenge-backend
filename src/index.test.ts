@@ -99,9 +99,7 @@ describe('POST /pay-ticket', () => {
 			const barCode = (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode;
 			const payTicketResponse = await request(app).post("/pay-ticket").send((() => {
 				const requestBody: PostPayTicketRequestBody = {
-					ticket: {
-						barCode,
-					},
+					barCode,
 					paymentMethod,
 				}
 				return requestBody;
@@ -143,18 +141,14 @@ describe('POST /pay-ticket', () => {
 			const barCode = (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode;
 			const payTicketResponse0 = await request(app).post("/pay-ticket").send((() => {
 				const requestBody: PostPayTicketRequestBody = {
-					ticket: {
-						barCode,
-					},
+					barCode,
 					paymentMethod: paymentMethod,
 				};
 				return requestBody;
 			})());
 			const payTicketResponse1 = await request(app).post("/pay-ticket").send((() => {
 				const requestBody: PostPayTicketRequestBody = {
-					ticket: {
-						barCode,
-					},
+					barCode,
 					paymentMethod: paymentMethod,
 				};
 				return requestBody;
@@ -223,9 +217,7 @@ describe('POST /get-ticket-state', () => {
 			const getTicketResponse = await request(app).post("/get-ticket").send();
 			await request(app).post("/pay-ticket").send((() => {
 				const requestBody: PostPayTicketRequestBody = {
-					ticket: {
-						barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
-					},
+					barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
 					paymentMethod: PaymentMethod.CASH,
 				};
 				return requestBody;
@@ -249,9 +241,7 @@ describe('POST /get-ticket-state', () => {
 			})());
 			await request(app).post("/pay-ticket").send((() => {
 				const requestBody: PostPayTicketRequestBody = {
-					ticket: {
-						barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
-					},
+					barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
 					paymentMethod: PaymentMethod.CASH,
 					paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
 				};
@@ -277,9 +267,7 @@ describe('POST /get-ticket-state', () => {
 			})());
 			await request(app).post("/pay-ticket").send((() => {
 				const requestBody: PostPayTicketRequestBody = {
-					ticket: {
-						barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
-					},
+					barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
 					paymentMethod: PaymentMethod.CASH,
 					paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
 				};
@@ -303,18 +291,14 @@ describe('POST /get-ticket-state', () => {
 			const getTicketResponse = await request(app).post("/get-ticket").send();
 			await request(app).post("/pay-ticket").send((() => {
 				const requestBody: PostPayTicketRequestBody = {
-					ticket: {
-						barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
-					},
+					barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
 					paymentMethod: PaymentMethod.CASH,
 				};
 				return requestBody;
 			})());
 			await request(app).post("/pay-ticket").send((() => {
 				const requestBody: PostPayTicketRequestBody = {
-					ticket: {
-						barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
-					},
+					barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
 					paymentMethod: PaymentMethod.CASH,
 				};
 				return requestBody;
@@ -338,9 +322,7 @@ describe('POST /get-ticket-state', () => {
 			})());
 			await request(app).post("/pay-ticket").send((() => {
 				const requestBody: PostPayTicketRequestBody = {
-					ticket: {
-						barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
-					},
+					barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
 					paymentMethod: PaymentMethod.CASH,
 					paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
 				};
@@ -348,9 +330,7 @@ describe('POST /get-ticket-state', () => {
 			})());
 			await request(app).post("/pay-ticket").send((() => {
 				const requestBody: PostPayTicketRequestBody = {
-					ticket: {
-						barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
-					},
+					barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
 					paymentMethod: PaymentMethod.CASH,
 					paymentDate: (new Date(2020, 2, 10, 5, 0, 0, 0)).getTime(),
 				};
@@ -376,9 +356,7 @@ describe('POST /get-ticket-state', () => {
 			})());
 			await request(app).post("/pay-ticket").send((() => {
 				const requestBody: PostPayTicketRequestBody = {
-					ticket: {
-						barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
-					},
+					barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
 					paymentMethod: PaymentMethod.CASH,
 					paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
 				};
@@ -386,9 +364,7 @@ describe('POST /get-ticket-state', () => {
 			})());
 			await request(app).post("/pay-ticket").send((() => {
 				const requestBody: PostPayTicketRequestBody = {
-					ticket: {
-						barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
-					},
+					barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
 					paymentMethod: PaymentMethod.CASH,
 					paymentDate: (new Date(2020, 2, 10, 5, 0, 0, 0)).getTime(),
 				};
@@ -480,9 +456,7 @@ describe('POST /calculate-ticket-price', () => {
 					const paymentMethod = PaymentMethod.CASH;
 					await request(app).post("/pay-ticket").send((() => {
 						const requestBody: PostPayTicketRequestBody = {
-							ticket: {
-								barCode,
-							},
+							barCode,
 							paymentMethod,
 							paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
 						}
@@ -517,9 +491,7 @@ describe('POST /calculate-ticket-price', () => {
 					const paymentMethod = PaymentMethod.CASH;
 					await request(app).post("/pay-ticket").send((() => {
 						const requestBody: PostPayTicketRequestBody = {
-							ticket: {
-								barCode,
-							},
+							barCode,
 							paymentMethod,
 							paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
 						}
@@ -527,9 +499,7 @@ describe('POST /calculate-ticket-price', () => {
 					})());
 					await request(app).post("/pay-ticket").send((() => {
 						const requestBody: PostPayTicketRequestBody = {
-							ticket: {
-								barCode,
-							},
+							barCode,
 							paymentMethod,
 							paymentDate: (new Date(2020, 2, 10, 4, 0, 0, 0)).getTime(),
 						}
@@ -566,9 +536,7 @@ describe('POST /calculate-ticket-price', () => {
 					const paymentMethod = PaymentMethod.CASH;
 					await request(app).post("/pay-ticket").send((() => {
 						const requestBody: PostPayTicketRequestBody = {
-							ticket: {
-								barCode,
-							},
+							barCode,
 							paymentMethod,
 							paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
 						}
@@ -597,9 +565,7 @@ describe('POST /calculate-ticket-price', () => {
 					const paymentMethod = PaymentMethod.CASH;
 					await request(app).post("/pay-ticket").send((() => {
 						const requestBody: PostPayTicketRequestBody = {
-							ticket: {
-								barCode,
-							},
+							barCode,
 							paymentMethod,
 							paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
 						}
@@ -628,9 +594,7 @@ describe('POST /calculate-ticket-price', () => {
 					const paymentMethod = PaymentMethod.CASH;
 					await request(app).post("/pay-ticket").send((() => {
 						const requestBody: PostPayTicketRequestBody = {
-							ticket: {
-								barCode,
-							},
+							barCode,
 							paymentMethod,
 							paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
 						}
@@ -661,9 +625,7 @@ describe('POST /calculate-ticket-price', () => {
 					const paymentMethod = PaymentMethod.CASH;
 					await request(app).post("/pay-ticket").send((() => {
 						const requestBody: PostPayTicketRequestBody = {
-							ticket: {
-								barCode,
-							},
+							barCode,
 							paymentMethod,
 							paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
 						}
@@ -671,9 +633,7 @@ describe('POST /calculate-ticket-price', () => {
 					})());
 					await request(app).post("/pay-ticket").send((() => {
 						const requestBody: PostPayTicketRequestBody = {
-							ticket: {
-								barCode,
-							},
+							barCode,
 							paymentMethod,
 							paymentDate: (new Date(2020, 2, 10, 5, 0, 0, 0)).getTime(),
 						}
@@ -702,9 +662,7 @@ describe('POST /calculate-ticket-price', () => {
 					const paymentMethod = PaymentMethod.CASH;
 					await request(app).post("/pay-ticket").send((() => {
 						const requestBody: PostPayTicketRequestBody = {
-							ticket: {
-								barCode,
-							},
+							barCode,
 							paymentMethod,
 							paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
 						}
@@ -712,9 +670,7 @@ describe('POST /calculate-ticket-price', () => {
 					})());
 					await request(app).post("/pay-ticket").send((() => {
 						const requestBody: PostPayTicketRequestBody = {
-							ticket: {
-								barCode,
-							},
+							barCode,
 							paymentMethod,
 							paymentDate: (new Date(2020, 2, 10, 5, 0, 0, 0)).getTime(),
 						}
@@ -743,9 +699,7 @@ describe('POST /calculate-ticket-price', () => {
 					const paymentMethod = PaymentMethod.CASH;
 					await request(app).post("/pay-ticket").send((() => {
 						const requestBody: PostPayTicketRequestBody = {
-							ticket: {
-								barCode,
-							},
+							barCode,
 							paymentMethod,
 							paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
 						}
@@ -753,9 +707,7 @@ describe('POST /calculate-ticket-price', () => {
 					})());
 					await request(app).post("/pay-ticket").send((() => {
 						const requestBody: PostPayTicketRequestBody = {
-							ticket: {
-								barCode,
-							},
+							barCode,
 							paymentMethod,
 							paymentDate: (new Date(2020, 2, 10, 5, 0, 0, 0)).getTime(),
 						}
@@ -795,9 +747,7 @@ describe('POST /checkout-success', () => {
 			const ticketId = ticketInstanceAfterGetTicket.dataValues.id;
 			await request(app).post("/pay-ticket").send((() => {
 				const requestBody: PostPayTicketRequestBody = {
-					ticket: {
-						barCode,
-					},
+					barCode,
 					paymentMethod: PaymentMethod.CASH,
 				};
 				return requestBody;
