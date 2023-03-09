@@ -26,7 +26,7 @@ app.use(ticketsRouter);
 PaymentMethodModel.hasMany(PaymentModel, {
 	foreignKey: {
 		allowNull: false,
-	}
+	},
 });
 PaymentModel.belongsTo(PaymentMethodModel);
 
