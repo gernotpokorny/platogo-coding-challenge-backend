@@ -1,4 +1,4 @@
-import request from 'supertest';
+import request, { agent } from 'supertest';
 import app from './index';
 
 // constants
@@ -19,10 +19,13 @@ import {
 	PostCheckoutSuccessResponseBody,
 	PostGetTicketStateRequestBody,
 	PostGetTicketStateResponseBody,
+	PostCalculateTicketPriceRequestBody,
+	PostCalculateTicketPriceResponseBody,
 } from './features/parking-garage/ParkingGarage.routes';
 
 describe('Initial Setup', () => {
 	beforeAll(async () => {
+		agent(app); // trigger the execution of the code of app
 		await new Promise(r => setTimeout(r, 2000)); // jest does not support top level awaits. Therefore I cannot await the async code within `index.ts`.
 	});
 	test('Initially the there should be no tickets within the database', async () => {
@@ -401,6 +404,376 @@ describe('POST /get-ticket-state', () => {
 			expect(getTicketStateResponse.statusCode).toBe(201);
 			expect(getTicketStateResponse.headers['content-type']).toEqual(expect.stringContaining('json'));
 			expect((getTicketStateResponse.body as PostGetTicketStateResponseBody).ticketState).toBe('UNPAID');
+		});
+	});
+});
+
+describe('POST /calculate-ticket-price', () => {
+	beforeAll(async () => {
+		await new Promise(r => setTimeout(r, 2000)); // jest does not support top level awaits. Therefore I cannot await the async code within `index.ts`.
+	});
+
+	describe('unpaid ticket', () => {
+		test('the calculated price of a newly issued ticket should be 2', async () => {
+			const getTicketResponse = await request(app).post("/get-ticket").send();
+			const calculateTicketPriceResponse = await request(app).post("/calculate-ticket-price").send((() => {
+				const requestBody: PostCalculateTicketPriceRequestBody = {
+					barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
+				};
+				return requestBody;
+			})());
+			expect(calculateTicketPriceResponse.statusCode).toBe(201);
+			expect(calculateTicketPriceResponse.headers['content-type']).toEqual(expect.stringContaining('json'));
+			expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).ticketPrice).toBe(2);
+			expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).paymentReceipt).not.toBeDefined();
+		});
+		test('Every started hour costs 2 Eur more: 60 min 00 sec passed: price should be 2', async () => {
+			const getTicketResponse = await request(app).post("/get-ticket").send((() => {
+				const requestBody: PostGetTicketRequestBody = {
+					dateOfIssuance: (new Date(2020, 2, 10, 1, 0, 0, 0)).getTime()
+				}
+				return requestBody;
+			})());
+			const calculateTicketPriceResponse = await request(app).post("/calculate-ticket-price").send((() => {
+				const requestBody: PostCalculateTicketPriceRequestBody = {
+					barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
+					currentDate: (new Date(2020, 2, 10, 2, 0, 0, 0)).getTime()
+				};
+				return requestBody;
+			})());
+			expect(calculateTicketPriceResponse.statusCode).toBe(201);
+			expect(calculateTicketPriceResponse.headers['content-type']).toEqual(expect.stringContaining('json'));
+			expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).ticketPrice).toBe(2);
+			expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).paymentReceipt).not.toBeDefined();
+		});
+		test('Every started hour costs 2 Eur more: 60 min 01 sec passed: price should be 4', async () => {
+			const getTicketResponse = await request(app).post("/get-ticket").send((() => {
+				const requestBody: PostGetTicketRequestBody = {
+					dateOfIssuance: (new Date(2020, 2, 10, 1, 0, 0, 0)).getTime()
+				}
+				return requestBody;
+			})());
+			const calculateTicketPriceResponse = await request(app).post("/calculate-ticket-price").send((() => {
+				const requestBody: PostCalculateTicketPriceRequestBody = {
+					barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
+					currentDate: (new Date(2020, 2, 10, 2, 0, 1, 0)).getTime()
+				};
+				return requestBody;
+			})());
+			expect(calculateTicketPriceResponse.statusCode).toBe(201);
+			expect(calculateTicketPriceResponse.headers['content-type']).toEqual(expect.stringContaining('json'));
+			expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).ticketPrice).toBe(4);
+			expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).paymentReceipt).not.toBeDefined();
+		});
+	});
+	describe('payed ticket', () => {
+		describe('<= 15 min have passed since last payment', () => {
+			describe('one payment', () => {
+				test('15 min 00 sec passed since last payment: the calculated price should be 0 and a payment receipt should be returned', async () => {
+					const getTicketResponse = await request(app).post("/get-ticket").send((() => {
+						const requestBody: PostGetTicketRequestBody = {
+							dateOfIssuance: (new Date(2020, 2, 10, 0, 0, 0, 0)).getTime()
+						}
+						return requestBody;
+					})());
+					const barCode = (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode;
+					const paymentMethod = PaymentMethod.CASH;
+					await request(app).post("/pay-ticket").send((() => {
+						const requestBody: PostPayTicketRequestBody = {
+							ticket: {
+								barCode,
+							},
+							paymentMethod,
+							paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
+						}
+						return requestBody;
+					})());
+					const calculateTicketPriceResponse = await request(app).post("/calculate-ticket-price").send((() => {
+						const requestBody: PostCalculateTicketPriceRequestBody = {
+							barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
+							currentDate: (new Date(2020, 2, 10, 3, 15, 0, 0)).getTime()
+						};
+						return requestBody;
+					})());
+					expect(calculateTicketPriceResponse.statusCode).toBe(201);
+					expect(calculateTicketPriceResponse.headers['content-type']).toEqual(expect.stringContaining('json'));
+					expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).ticketPrice).toBe(0);
+					expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).paymentReceipt).toStrictEqual([
+						'Paid: 6€',
+						'Payment date: Dienstag, 10. März 2020 um 03:00:00',
+						'Payment method: CASH',
+					]);
+				});
+			});
+			describe('multiple payments', () => {
+				test('15 min 00 sec passed since last payment: the calculated price should be 0 and a payment receipt should be returned', async () => {
+					const getTicketResponse = await request(app).post("/get-ticket").send((() => {
+						const requestBody: PostGetTicketRequestBody = {
+							dateOfIssuance: (new Date(2020, 2, 10, 0, 0, 0, 0)).getTime()
+						}
+						return requestBody;
+					})());
+					const barCode = (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode;
+					const paymentMethod = PaymentMethod.CASH;
+					await request(app).post("/pay-ticket").send((() => {
+						const requestBody: PostPayTicketRequestBody = {
+							ticket: {
+								barCode,
+							},
+							paymentMethod,
+							paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
+						}
+						return requestBody;
+					})());
+					await request(app).post("/pay-ticket").send((() => {
+						const requestBody: PostPayTicketRequestBody = {
+							ticket: {
+								barCode,
+							},
+							paymentMethod,
+							paymentDate: (new Date(2020, 2, 10, 4, 0, 0, 0)).getTime(),
+						}
+						return requestBody;
+					})());
+					const calculateTicketPriceResponse = await request(app).post("/calculate-ticket-price").send((() => {
+						const requestBody: PostCalculateTicketPriceRequestBody = {
+							barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
+							currentDate: (new Date(2020, 2, 10, 4, 15, 0, 0)).getTime()
+						};
+						return requestBody;
+					})());
+					expect(calculateTicketPriceResponse.statusCode).toBe(201);
+					expect(calculateTicketPriceResponse.headers['content-type']).toEqual(expect.stringContaining('json'));
+					expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).ticketPrice).toBe(0);
+					expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).paymentReceipt).toStrictEqual([
+						'Paid: 2€',
+						'Payment date: Dienstag, 10. März 2020 um 04:00:00',
+						'Payment method: CASH',
+					]);
+				});
+			});
+		});
+		describe('> 15 min have passed since last payment', () => {
+			describe('one payment', () => {
+				test('First hour price since the last payment should be 2', async () => {
+					const getTicketResponse = await request(app).post("/get-ticket").send((() => {
+						const requestBody: PostGetTicketRequestBody = {
+							dateOfIssuance: (new Date(2020, 2, 10, 0, 0, 0, 0)).getTime()
+						}
+						return requestBody;
+					})());
+					const barCode = (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode;
+					const paymentMethod = PaymentMethod.CASH;
+					await request(app).post("/pay-ticket").send((() => {
+						const requestBody: PostPayTicketRequestBody = {
+							ticket: {
+								barCode,
+							},
+							paymentMethod,
+							paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
+						}
+						return requestBody;
+					})());
+					const calculateTicketPriceResponse = await request(app).post("/calculate-ticket-price").send((() => {
+						const requestBody: PostCalculateTicketPriceRequestBody = {
+							barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
+							currentDate: (new Date(2020, 2, 10, 3, 15, 1, 0)).getTime()
+						};
+						return requestBody;
+					})());
+					expect(calculateTicketPriceResponse.statusCode).toBe(201);
+					expect(calculateTicketPriceResponse.headers['content-type']).toEqual(expect.stringContaining('json'));
+					expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).ticketPrice).toBe(2);
+					expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).paymentReceipt).not.toBeDefined();
+				});
+				test('Every started hour since the last payment costs 2 Eur more: 60 min 00 sec passed', async () => {
+					const getTicketResponse = await request(app).post("/get-ticket").send((() => {
+						const requestBody: PostGetTicketRequestBody = {
+							dateOfIssuance: (new Date(2020, 2, 10, 0, 0, 0, 0)).getTime()
+						}
+						return requestBody;
+					})());
+					const barCode = (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode;
+					const paymentMethod = PaymentMethod.CASH;
+					await request(app).post("/pay-ticket").send((() => {
+						const requestBody: PostPayTicketRequestBody = {
+							ticket: {
+								barCode,
+							},
+							paymentMethod,
+							paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
+						}
+						return requestBody;
+					})());
+					const calculateTicketPriceResponse = await request(app).post("/calculate-ticket-price").send((() => {
+						const requestBody: PostCalculateTicketPriceRequestBody = {
+							barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
+							currentDate: (new Date(2020, 2, 10, 4, 0, 0, 0)).getTime()
+						};
+						return requestBody;
+					})());
+					expect(calculateTicketPriceResponse.statusCode).toBe(201);
+					expect(calculateTicketPriceResponse.headers['content-type']).toEqual(expect.stringContaining('json'));
+					expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).ticketPrice).toBe(2);
+					expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).paymentReceipt).not.toBeDefined();
+				});
+				test('Every started hour since the last payment costs 2 Eur more: 60 min 01 sec passed', async () => {
+					const getTicketResponse = await request(app).post("/get-ticket").send((() => {
+						const requestBody: PostGetTicketRequestBody = {
+							dateOfIssuance: (new Date(2020, 2, 10, 0, 0, 0, 0)).getTime()
+						}
+						return requestBody;
+					})());
+					const barCode = (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode;
+					const paymentMethod = PaymentMethod.CASH;
+					await request(app).post("/pay-ticket").send((() => {
+						const requestBody: PostPayTicketRequestBody = {
+							ticket: {
+								barCode,
+							},
+							paymentMethod,
+							paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
+						}
+						return requestBody;
+					})());
+					const calculateTicketPriceResponse = await request(app).post("/calculate-ticket-price").send((() => {
+						const requestBody: PostCalculateTicketPriceRequestBody = {
+							barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
+							currentDate: (new Date(2020, 2, 10, 4, 0, 1, 0)).getTime()
+						};
+						return requestBody;
+					})());
+					expect(calculateTicketPriceResponse.statusCode).toBe(201);
+					expect(calculateTicketPriceResponse.headers['content-type']).toEqual(expect.stringContaining('json'));
+					expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).ticketPrice).toBe(4);
+					expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).paymentReceipt).not.toBeDefined();
+				});
+			});
+			describe('multiple payments', () => {
+				test('First hour price since the last payment should be 2', async () => {
+					const getTicketResponse = await request(app).post("/get-ticket").send((() => {
+						const requestBody: PostGetTicketRequestBody = {
+							dateOfIssuance: (new Date(2020, 2, 10, 0, 0, 0, 0)).getTime()
+						}
+						return requestBody;
+					})());
+					const barCode = (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode;
+					const paymentMethod = PaymentMethod.CASH;
+					await request(app).post("/pay-ticket").send((() => {
+						const requestBody: PostPayTicketRequestBody = {
+							ticket: {
+								barCode,
+							},
+							paymentMethod,
+							paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
+						}
+						return requestBody;
+					})());
+					await request(app).post("/pay-ticket").send((() => {
+						const requestBody: PostPayTicketRequestBody = {
+							ticket: {
+								barCode,
+							},
+							paymentMethod,
+							paymentDate: (new Date(2020, 2, 10, 5, 0, 0, 0)).getTime(),
+						}
+						return requestBody;
+					})());
+					const calculateTicketPriceResponse = await request(app).post("/calculate-ticket-price").send((() => {
+						const requestBody: PostCalculateTicketPriceRequestBody = {
+							barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
+							currentDate: (new Date(2020, 2, 10, 5, 15, 1, 0)).getTime()
+						};
+						return requestBody;
+					})());
+					expect(calculateTicketPriceResponse.statusCode).toBe(201);
+					expect(calculateTicketPriceResponse.headers['content-type']).toEqual(expect.stringContaining('json'));
+					expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).ticketPrice).toBe(2);
+					expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).paymentReceipt).not.toBeDefined();
+				});
+				test('Every started hour since the last payment costs 2 Eur more: 60 min 00 sec passed', async () => {
+					const getTicketResponse = await request(app).post("/get-ticket").send((() => {
+						const requestBody: PostGetTicketRequestBody = {
+							dateOfIssuance: (new Date(2020, 2, 10, 0, 0, 0, 0)).getTime()
+						}
+						return requestBody;
+					})());
+					const barCode = (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode;
+					const paymentMethod = PaymentMethod.CASH;
+					await request(app).post("/pay-ticket").send((() => {
+						const requestBody: PostPayTicketRequestBody = {
+							ticket: {
+								barCode,
+							},
+							paymentMethod,
+							paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
+						}
+						return requestBody;
+					})());
+					await request(app).post("/pay-ticket").send((() => {
+						const requestBody: PostPayTicketRequestBody = {
+							ticket: {
+								barCode,
+							},
+							paymentMethod,
+							paymentDate: (new Date(2020, 2, 10, 5, 0, 0, 0)).getTime(),
+						}
+						return requestBody;
+					})());
+					const calculateTicketPriceResponse = await request(app).post("/calculate-ticket-price").send((() => {
+						const requestBody: PostCalculateTicketPriceRequestBody = {
+							barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
+							currentDate: (new Date(2020, 2, 10, 6, 0, 0, 0)).getTime()
+						};
+						return requestBody;
+					})());
+					expect(calculateTicketPriceResponse.statusCode).toBe(201);
+					expect(calculateTicketPriceResponse.headers['content-type']).toEqual(expect.stringContaining('json'));
+					expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).ticketPrice).toBe(2);
+					expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).paymentReceipt).not.toBeDefined();
+				});
+				test('Every started hour since the last payment costs 2 Eur more: 60 min 01 sec passed', async () => {
+					const getTicketResponse = await request(app).post("/get-ticket").send((() => {
+						const requestBody: PostGetTicketRequestBody = {
+							dateOfIssuance: (new Date(2020, 2, 10, 0, 0, 0, 0)).getTime()
+						}
+						return requestBody;
+					})());
+					const barCode = (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode;
+					const paymentMethod = PaymentMethod.CASH;
+					await request(app).post("/pay-ticket").send((() => {
+						const requestBody: PostPayTicketRequestBody = {
+							ticket: {
+								barCode,
+							},
+							paymentMethod,
+							paymentDate: (new Date(2020, 2, 10, 3, 0, 0, 0)).getTime(),
+						}
+						return requestBody;
+					})());
+					await request(app).post("/pay-ticket").send((() => {
+						const requestBody: PostPayTicketRequestBody = {
+							ticket: {
+								barCode,
+							},
+							paymentMethod,
+							paymentDate: (new Date(2020, 2, 10, 5, 0, 0, 0)).getTime(),
+						}
+						return requestBody;
+					})());
+					const calculateTicketPriceResponse = await request(app).post("/calculate-ticket-price").send((() => {
+						const requestBody: PostCalculateTicketPriceRequestBody = {
+							barCode: (getTicketResponse.body as PostGetTicketResponseBody).ticket.barCode,
+							currentDate: (new Date(2020, 2, 10, 6, 0, 1, 0)).getTime()
+						};
+						return requestBody;
+					})());
+					expect(calculateTicketPriceResponse.statusCode).toBe(201);
+					expect(calculateTicketPriceResponse.headers['content-type']).toEqual(expect.stringContaining('json'));
+					expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).ticketPrice).toBe(4);
+					expect((calculateTicketPriceResponse.body as PostCalculateTicketPriceResponseBody).paymentReceipt).not.toBeDefined();
+				});
+			});
 		});
 	});
 });

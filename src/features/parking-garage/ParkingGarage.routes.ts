@@ -12,10 +12,10 @@ import { Payment as PaymentModel } from './models/Payment';
 import { PaymentMethod as PaymentMethodModel } from './models/PaymentMethod';
 
 // types
-import { Ticket, Payment } from './ParkingGarage.types';
+import { Ticket, Payment, PaymentReceipt } from './ParkingGarage.types';
 
 // utils
-import { generateBarCode, calculateTicketState } from './ParkingGarage.utils';
+import { generateBarCode, calculateTicketState, calculateTicketPrice, getFormattedPaymentDate } from './ParkingGarage.utils';
 import _ from 'lodash';
 
 export const ticketsRouter = Router();
@@ -155,5 +155,104 @@ ticketsRouter.post<PostGetTicketStateRequestParams, PostGetTicketStateResponseBo
 		res.status(201).json({
 			ticketState,
 		});
+	}
+});
+
+
+interface PostCalculateTicketPriceRequestParams { }
+
+export interface PostCalculateTicketPriceRequestBody {
+	barCode: string;
+	currentDate?: number; // For testing purposes
+}
+
+export interface PostCalculateTicketPriceResponseBody {
+	ticketPrice: number;
+	paymentReceipt?: PaymentReceipt;
+}
+
+ticketsRouter.post<PostCalculateTicketPriceRequestParams, PostCalculateTicketPriceResponseBody, PostCalculateTicketPriceRequestBody>('/calculate-ticket-price', async (req, res, next) => {
+	if (req.body.barCode === undefined) {
+		return res.status(422).json();
+	}
+	const currentDate = req.body.currentDate ? new Date(req.body.currentDate) : new Date();
+	const ticketInstance = await TicketModel.findOne({
+		where: {
+			barCode: req.body.barCode,
+		}
+	});
+	if (ticketInstance) {
+		const [payments] = await sequelize.query(
+			'SELECT `Payment`.`paymentDate`, `PaymentMethod`.`name` AS `paymentMethod` FROM `payments` AS `Payment` \
+			INNER JOIN paymentMethods  AS `PaymentMethod` ON `Payment`.`PaymentMethodId` = `PaymentMethod`.`id` \
+			WHERE `Payment`.`TicketId` = :ticketId;',
+			{
+				replacements: {
+					ticketId: ticketInstance.dataValues.id
+				},
+			}
+		) as [Payment[], unknown];
+		const ticketState = calculateTicketState(
+			{
+				barCode: ticketInstance.dataValues.barCode,
+				dateOfIssuance: ticketInstance.dataValues.dateOfIssuance,
+				payments: payments,
+			},
+			currentDate
+		);
+		if (payments && payments.length > 0 && ticketState === TicketState.PAID) {
+			if (payments.length === 1) {
+				const issueDate = new Date(ticketInstance.dataValues.dateOfIssuance);
+				const currentPayment = payments[payments.length - 1];
+				const paymentDate = new Date(currentPayment.paymentDate);
+				const ticketPrice = calculateTicketPrice(issueDate, paymentDate);
+				return res.status(201).json({
+					ticketPrice: 0,
+					paymentReceipt: [
+						`Paid: ${ticketPrice}€`,
+						`Payment date: ${getFormattedPaymentDate(paymentDate)}`,
+						`Payment method: ${currentPayment.paymentMethod}`,
+					],
+				});
+			}
+			else {
+				const penultimatePaymentDate = new Date(payments[payments.length - 2].paymentDate);
+				const currentPayment = payments[payments.length - 1];
+				const paymentDate = new Date(currentPayment.paymentDate);
+				const ticketPrice = calculateTicketPrice(penultimatePaymentDate, paymentDate);
+				return res.status(201).json({
+					ticketPrice: 0,
+					paymentReceipt: [
+						`Paid: ${ticketPrice}€`,
+						`Payment date: ${getFormattedPaymentDate(paymentDate)}`,
+						`Payment method: ${currentPayment.paymentMethod}`,
+					],
+				});
+			}
+		}
+		else {
+			if (payments && payments.length > 0) {
+				const lastPayment = payments[payments.length - 1];
+				const paymentDate = currentDate;
+				const ticketPrice = calculateTicketPrice(
+					new Date(lastPayment.paymentDate),
+					paymentDate
+				);
+				return res.status(201).json({
+					ticketPrice,
+				});
+			}
+			else {
+				const issueDate = new Date(ticketInstance.dataValues.dateOfIssuance);
+				const paymentDate = currentDate;
+				const ticketPrice = calculateTicketPrice(issueDate, paymentDate);
+				return res.status(201).json({
+					ticketPrice,
+				});
+			}
+		}
+	}
+	else {
+		res.status(404).json();
 	}
 });
