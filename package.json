@@ -1,5 +1,5 @@
 {
-	"name": "platogo-coding-challange-backend",
+	"name": "platogo-coding-challenge-backend",
 	"version": "1.0.0",
 	"description": "Platogo Coding Challenge Backend",
 	"main": "build/index.js",
