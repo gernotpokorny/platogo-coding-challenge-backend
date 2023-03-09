@@ -103,6 +103,9 @@ export interface PostCheckoutSuccessResponseBody {
 ticketsRouter.post<PostCheckoutSuccessRequestParams, PostCheckoutSuccessResponseBody, PostCheckoutSuccessRequestBody>(
 	'/checkout-success'
 	, async (req, res, next) => {
+		if (req.body.barCode === undefined) {
+			return res.status(422).json();
+		}
 		const ticketInstance = await TicketModel.findOne({
 			where: {
 				barCode: req.body.barCode,
