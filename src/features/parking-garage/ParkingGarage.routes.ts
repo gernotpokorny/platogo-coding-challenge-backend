@@ -69,11 +69,11 @@ ticketsRouter.post<PostPayTicketRequestParams, PostPayTicketResponseBody, PostPa
 			name: req.body.paymentMethod,
 		},
 	});
-	const payment = {
-		paymentDate: req.body.paymentDate ? new Date(req.body.paymentDate) : new Date(),
-		PaymentMethodId: paymentMethodInstance?.dataValues.id,
-	}
 	if (ticketInstance) {
+		const payment = {
+			paymentDate: req.body.paymentDate ? new Date(req.body.paymentDate) : new Date(),
+			PaymentMethodId: paymentMethodInstance?.dataValues.id,
+		}
 		await ticketInstance.createPayment(payment);
 
 		res.status(201).json({
