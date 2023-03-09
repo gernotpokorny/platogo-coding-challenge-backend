@@ -59,22 +59,22 @@ ticketsRouter.post<PostPayTicketRequestParams, PostPayTicketResponseBody, PostPa
 	if (req.body.paymentMethod === undefined) {
 		return res.status(422).json();
 	}
-	const ticket = await TicketModel.findOne({
+	const ticketInstance = await TicketModel.findOne({
 		where: {
 			barCode: req.body.ticket.barCode,
 		}
 	});
-	const paymentMethod = await PaymentMethodModel.findOne({
+	const paymentMethodInstance = await PaymentMethodModel.findOne({
 		where: {
 			name: req.body.paymentMethod,
 		},
 	});
 	const payment = {
 		paymentDate: req.body.paymentDate ? new Date(req.body.paymentDate) : new Date(),
-		PaymentMethodId: paymentMethod?.dataValues.id,
+		PaymentMethodId: paymentMethodInstance?.dataValues.id,
 	}
-	if (ticket) {
-		await ticket.createPayment(payment);
+	if (ticketInstance) {
+		await ticketInstance.createPayment(payment);
 
 		res.status(201).json({
 			paymentDate: payment.paymentDate.getTime()
@@ -96,18 +96,18 @@ export interface PostCheckoutSuccessResponseBody {
 }
 
 ticketsRouter.post<PostCheckoutSuccessRequestParams, PostCheckoutSuccessResponseBody, PostCheckoutSuccessRequestBody>('/checkout-success', async (req, res, next) => {
-	const ticket = await TicketModel.findOne({
+	const ticketInstance = await TicketModel.findOne({
 		where: {
 			barCode: req.body.barCode,
 		}
 	});
-	if (ticket) {
+	if (ticketInstance) {
 		PaymentModel.destroy({
 			where: {
-				TicketId: ticket?.id,
+				TicketId: ticketInstance.id,
 			}
 		})
-		await ticket.destroy();
+		await ticketInstance.destroy();
 	}
 	res.status(201).json({ success: true });
 });
@@ -127,27 +127,27 @@ ticketsRouter.post<PostGetTicketStateRequestParams, PostGetTicketStateResponseBo
 	if (req.body.barCode === undefined) {
 		return res.status(422).json();
 	}
-	const ticket = await TicketModel.findOne({
+	const ticketInstance = await TicketModel.findOne({
 		where: {
 			barCode: req.body.barCode,
 		}
 	});
-	if (ticket) {
+	if (ticketInstance) {
 		const [results] = await sequelize.query(
 			'SELECT `Payment`.`paymentDate`, `PaymentMethod`.`name` AS `paymentMethod` FROM `payments` AS `Payment` \
 			INNER JOIN paymentMethods  AS `PaymentMethod` ON `Payment`.`PaymentMethodId` = `PaymentMethod`.`id` \
 			WHERE `Payment`.`TicketId` = :ticketId;',
 			{
 				replacements: {
-					ticketId: ticket.dataValues.id
+					ticketId: ticketInstance.dataValues.id
 				},
 			}
 		);
 		const currentDate = req.body.currentDate ? new Date(req.body.currentDate) : new Date();
 		const ticketState = calculateTicketState(
 			{
-				barCode: ticket.dataValues.barCode,
-				dateOfIssuance: ticket.dataValues.dateOfIssuance,
+				barCode: ticketInstance.dataValues.barCode,
+				dateOfIssuance: ticketInstance.dataValues.dateOfIssuance,
 				payments: results as Payment[],
 			},
 			currentDate
