@@ -4,7 +4,8 @@
 	"description": "Platogo Coding Challenge Backend",
 	"main": "build/index.js",
 	"scripts": {
-		"build": "tsc",
+		"build": "tsc --sourceMap true",
+		"build:prod": "tsc",
 		"test": "jest",
 		"start": "node build/index.js"
 	},

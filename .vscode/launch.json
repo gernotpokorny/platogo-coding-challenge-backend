@@ -1,0 +1,30 @@
+{
+	"configurations": [
+		{
+			"name": "Docker Node.js Launch",
+			"type": "docker",
+			"request": "launch",
+			"preLaunchTask": "docker-run: debug",
+			"platform": "node"
+		},
+		{
+			"name": "Launch via NPM",
+			"request": "launch",
+			"runtimeArgs": [
+				"run-script",
+				"start",
+				"--",
+				"--nolazy",
+				"--inspect-brk=9229"
+			],
+			"runtimeExecutable": "npm",
+			"skipFiles": [
+				"<node_internals>/**"
+			],
+			"type": "node",
+			"env": {
+				"NODE_ENV": "development"
+			}
+		}
+	]
+}

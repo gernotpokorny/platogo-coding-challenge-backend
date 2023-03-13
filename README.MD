@@ -8,15 +8,32 @@ The frontend can be found within the [`platogo-coding-challange`][1] repo.
 
 [1]: https://github.com/gernotpokorny/regionalmedien-coding-challenge
 
-## Compile and start
+## Compile and start during development
 
-```
-npm run build
-npm start
-```
+## With debugger
+
+### Via Docker (preferred)
+
+1. Run `npm run build`
+2. Run and Debug > Docker Node.js Launch
+
+### Without Docker
+
+1. Run `npm run build`
+2. Run and Debug > Launch via NPM
+
+## Without debugger
+
+### Via Docker
+
+1. Run `docker build .`
+2. Run `docker run -p 3001:3001 <image-id>`
+
+### Without Docker
+
+1. Run `npm run build`
+2. Run `npm start`
 
 ## Run the tests
 
-```
-npm run test
-```
+1. Run `npm run test`
