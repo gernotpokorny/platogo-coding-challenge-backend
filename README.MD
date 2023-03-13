@@ -11,7 +11,7 @@ The frontend can be found within the [`platogo-coding-challange`][1] repo.
 ## Compile and start
 
 ```
-npx tsc
+npm run build
 npm start
 ```
 
